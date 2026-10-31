@@ -32,7 +32,18 @@ def pcd_to_np(pcd_file):
 
     xyz = np.asarray(pcd.points)
     # we save the intensity in the first channel
-    intensity = np.expand_dims(np.asarray(pcd.colors)[:, 0], -1)
+    colors = np.asarray(pcd.colors)
+    if colors.shape == xyz.shape:
+        intensity = np.expand_dims(colors[:, 0], -1)
+    else:
+        # V2XSet may store a real intensity field rather than RGB-packed intensity.
+        # Preserve its values and fail if no measured fourth feature is available.
+        cloud = pypcd.PointCloud.from_path(pcd_file)
+        if 'intensity' not in cloud.pc_data.dtype.names:
+            raise ValueError('PCD requires RGB-encoded or explicit intensity: ' + str(pcd_file))
+        intensity = np.asarray(cloud.pc_data['intensity']).reshape(-1, 1)
+        if len(intensity) != len(xyz):
+            raise ValueError('PCD XYZ/intensity point counts differ: ' + str(pcd_file))
     pcd_np = np.hstack((xyz, intensity))
 
     return np.asarray(pcd_np, dtype=np.float32)

@@ -1,0 +1,302 @@
+[
+  {
+    "path": ".gitignore",
+    "status": "modified",
+    "purpose": "忽略本地数据、权重和 CPU 测试临时产物"
+  },
+  {
+    "path": "docs/CODEFILLING_CHANGED_FILES.md",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/DOMA_OPV2V_V2XSET_ADAPTATION.md",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/codefilling_changed_files.json",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/codefilling_data_checks.json",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/codefilling_local_checks.json",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/codefilling_native_audit.json",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/codefilling_sources/camera_source.json",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/final.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/lock.json",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/m1.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/m2.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/m3.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/opv2v/m4.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/final.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/lock.json",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/m1.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/m2.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/m3.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_sources/v2xset/m4.yaml",
+    "status": "added",
+    "purpose": "协议源 YAML、SHA256、来源路径或 camera evidence"
+  },
+  {
+    "path": "docs/codefilling_test_results.txt",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "docs/server_settings.example.yaml",
+    "status": "added",
+    "purpose": "适配报告、命令模板或本地核验记录"
+  },
+  {
+    "path": "opencood/data_utils/codefilling_dataset.py",
+    "status": "added",
+    "purpose": "独立协议 Dataset/PCD 路径/CAV identity 和统一场景排除"
+  },
+  {
+    "path": "opencood/data_utils/datasets/basedataset/opv2v_basedataset.py",
+    "status": "modified",
+    "purpose": "补齐 modality 传播、Windows basename、默认 augmentation 和 RGB-only HDF5"
+  },
+  {
+    "path": "opencood/data_utils/datasets/codefilling_infer_dataset.py",
+    "status": "added",
+    "purpose": "原样复制 DOMA ordered GT-before-cutoff 数据逻辑"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/codebook.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/detector.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/finetune.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/infer.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m1.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m2.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m3.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m4.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/codebook.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/detector.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/finetune.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/infer.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m1.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m2.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m3.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m4.yaml",
+    "status": "added",
+    "purpose": "独立实验/训练阶段配置，不覆盖官方 YAML"
+  },
+  {
+    "path": "opencood/modality_assign/opv2v_4modality.json",
+    "status": "added",
+    "purpose": "从 DOMA 原样复制的训练或 ordered assignment"
+  },
+  {
+    "path": "opencood/modality_assign/opv2v_4modality_in_order.json",
+    "status": "added",
+    "purpose": "从 DOMA 原样复制的训练或 ordered assignment"
+  },
+  {
+    "path": "opencood/modality_assign/v2xset_4modality.json",
+    "status": "added",
+    "purpose": "从 DOMA 原样复制的训练或 ordered assignment"
+  },
+  {
+    "path": "opencood/modality_assign/v2xset_4modality_in_order.json",
+    "status": "added",
+    "purpose": "从 DOMA 原样复制的训练或 ordered assignment"
+  },
+  {
+    "path": "opencood/models/codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立四成员 CodeFilling 组装、训练冻结与真实 CPU 核心"
+  },
+  {
+    "path": "opencood/models/fuse_modules/codefilling_max.py",
+    "status": "added",
+    "purpose": "从原生文件逐字提取的 regroup/MaxFusion"
+  },
+  {
+    "path": "opencood/models/heter_encoders.py",
+    "status": "modified",
+    "purpose": "LSS nonpersistent device buffers；仅新模型 opt-in 使用 DOMA camera contract"
+  },
+  {
+    "path": "opencood/models/sub_modules/codefilling_camera.py",
+    "status": "added",
+    "purpose": "与 DOMA 源类 AST 一致的两个相机实现"
+  },
+  {
+    "path": "opencood/models/sub_modules/codefilling_transport.py",
+    "status": "added",
+    "purpose": "原生码本/Filling 包装、实际 sampled codes 与多尺度字节账本"
+  },
+  {
+    "path": "opencood/models/sub_modules/torch_transformation_utils.py",
+    "status": "modified",
+    "purpose": "移除未使用的 icecream import，使原生几何 warp 可做 CPU 契约测试"
+  },
+  {
+    "path": "opencood/tools/audit_codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立 audit_codefilling_doma 命令入口"
+  },
+  {
+    "path": "opencood/tools/check_codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立 check_codefilling_doma 命令入口"
+  },
+  {
+    "path": "opencood/tools/inference_codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立 inference_codefilling_doma 命令入口"
+  },
+  {
+    "path": "opencood/tools/prepare_codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立 prepare_codefilling_doma 命令入口"
+  },
+  {
+    "path": "opencood/tools/train_codefilling_doma.py",
+    "status": "added",
+    "purpose": "独立 train_codefilling_doma 命令入口"
+  },
+  {
+    "path": "opencood/utils/codefilling_protocol.py",
+    "status": "added",
+    "purpose": "来源/四模态/范围/服务器 receipt 契约"
+  },
+  {
+    "path": "opencood/utils/codefilling_state.py",
+    "status": "added",
+    "purpose": "严格父权重所有权、完整 checkpoint 和 epoch 续训"
+  },
+  {
+    "path": "opencood/utils/pcd_utils.py",
+    "status": "modified",
+    "purpose": "保留 RGB intensity，兼容显式 intensity 字段并拒绝无第四特征"
+  },
+  {
+    "path": "tests/test_codefilling_doma.py",
+    "status": "added",
+    "purpose": "Windows 静态与 CPU 实际算法/数据流/状态测试"
+  }
+]

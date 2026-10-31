@@ -1,0 +1,89 @@
+{
+  "initial_head": "57f83ccc7d8457da74f06424811c130c3020e19e",
+  "initial_status": "clean (observed before edits)",
+  "newline_policy": "normalize CRLF to LF when comparing Git blob to Windows checkout",
+  "native_files": [
+    {
+      "path": "opencood/models/sub_modules/codebook.py",
+      "unchanged": true,
+      "base_lf_sha256": "04c0775b49c143d5f7206e10b58bf2327a2e71cd6ed2ac42f237c6bd93132009",
+      "current_lf_sha256": "04c0775b49c143d5f7206e10b58bf2327a2e71cd6ed2ac42f237c6bd93132009"
+    },
+    {
+      "path": "opencood/utils/codebook_utils.py",
+      "unchanged": true,
+      "base_lf_sha256": "4d49f301b9b2f6956c0bde488419b2a44105856f70aefdaa4fa77b0cf32fcbcd",
+      "current_lf_sha256": "4d49f301b9b2f6956c0bde488419b2a44105856f70aefdaa4fa77b0cf32fcbcd"
+    },
+    {
+      "path": "opencood/models/comm_modules/where2comm.py",
+      "unchanged": true,
+      "base_lf_sha256": "019f4bd8b13c5861b21d89056425830b2fff37f015b539afcad8ce3c025adbcd",
+      "current_lf_sha256": "019f4bd8b13c5861b21d89056425830b2fff37f015b539afcad8ce3c025adbcd"
+    },
+    {
+      "path": "opencood/models/fuse_modules/fusion_in_one.py",
+      "unchanged": true,
+      "base_lf_sha256": "6389925894b4c572ac39af672f0094f3a1dc4c99246378797a82d58ca522e7c5",
+      "current_lf_sha256": "6389925894b4c572ac39af672f0094f3a1dc4c99246378797a82d58ca522e7c5"
+    },
+    {
+      "path": "opencood/models/heter_model_shared_head_solver.py",
+      "unchanged": true,
+      "base_lf_sha256": "4481857eb3be6a95c49471d6b698dad6e32d36d4f5ce2b95222a0a5d7314f0f9",
+      "current_lf_sha256": "4481857eb3be6a95c49471d6b698dad6e32d36d4f5ce2b95222a0a5d7314f0f9"
+    },
+    {
+      "path": "opencood/models/sub_modules/base_bev_backbone_resnet.py",
+      "unchanged": true,
+      "base_lf_sha256": "cad778c663285adf4447ac38a81174e2c550d3fb735972b921876c0a73964f0c",
+      "current_lf_sha256": "cad778c663285adf4447ac38a81174e2c550d3fb735972b921876c0a73964f0c"
+    },
+    {
+      "path": "opencood/models/sub_modules/downsample_conv.py",
+      "unchanged": true,
+      "base_lf_sha256": "5e45bc70e1add5847e7809f50076b83028147a5d3540baa15c89a0ec4342726e",
+      "current_lf_sha256": "5e45bc70e1add5847e7809f50076b83028147a5d3540baa15c89a0ec4342726e"
+    },
+    {
+      "path": "opencood/loss/point_pillar_depth_loss.py",
+      "unchanged": true,
+      "base_lf_sha256": "b13c91ea07d86944f869f08438974122034738616f760936c7f5ce2569001b27",
+      "current_lf_sha256": "b13c91ea07d86944f869f08438974122034738616f760936c7f5ce2569001b27"
+    },
+    {
+      "path": "opencood/loss/point_pillar_loss.py",
+      "unchanged": true,
+      "base_lf_sha256": "bf43175c621d3022200f379ad48f95860e297e55439d29f805296c717c25fde3",
+      "current_lf_sha256": "bf43175c621d3022200f379ad48f95860e297e55439d29f805296c717c25fde3"
+    },
+    {
+      "path": "opencood/utils/eval_utils.py",
+      "unchanged": true,
+      "base_lf_sha256": "e9ce629cdc6bb0d7ea0ca7b6a8f6f95708138694e6f0a26aa31e0096f5f4f041",
+      "current_lf_sha256": "e9ce629cdc6bb0d7ea0ca7b6a8f6f95708138694e6f0a26aa31e0096f5f4f041"
+    }
+  ],
+  "doma_head": "ef19dd01fbbbe35b82956b37c7b1a5b4bbf1bfd8",
+  "copied_inference_dataset_exact": true,
+  "python_compiled": [
+    "opencood/data_utils/codefilling_dataset.py",
+    "opencood/data_utils/datasets/basedataset/opv2v_basedataset.py",
+    "opencood/data_utils/datasets/codefilling_infer_dataset.py",
+    "opencood/models/codefilling_doma.py",
+    "opencood/models/fuse_modules/codefilling_max.py",
+    "opencood/models/heter_encoders.py",
+    "opencood/models/sub_modules/codefilling_camera.py",
+    "opencood/models/sub_modules/codefilling_transport.py",
+    "opencood/models/sub_modules/torch_transformation_utils.py",
+    "opencood/tools/audit_codefilling_doma.py",
+    "opencood/tools/check_codefilling_doma.py",
+    "opencood/tools/inference_codefilling_doma.py",
+    "opencood/tools/prepare_codefilling_doma.py",
+    "opencood/tools/train_codefilling_doma.py",
+    "opencood/utils/codefilling_protocol.py",
+    "opencood/utils/codefilling_state.py",
+    "opencood/utils/pcd_utils.py",
+    "tests/test_codefilling_doma.py"
+  ]
+}

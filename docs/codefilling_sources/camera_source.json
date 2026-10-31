@@ -1,0 +1,9 @@
+{
+  "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\models\\sub_modules\\lss_submodule.py",
+  "source_sha256": "c44c26d26a57c15eae4a812fbcc95daf215615f386002d8c3648bc865e3a9940",
+  "adapter_sha256": "4f24b5b586637abb4752897b2b396eed48ad4a736993f762ecb569e692e9358c",
+  "classes": [
+    "CamEncode",
+    "CamEncode_Resnet101"
+  ]
+}

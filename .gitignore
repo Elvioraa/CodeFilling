@@ -137,3 +137,11 @@ logs/
 # Checkpoint
 opencood/logs/
 
+# Local CodeFilling protocol experiment outputs (never source evidence).
+.test_artifacts/
+dataset/
+experiments/
+checkpoints/
+*.pth
+*.pt
+

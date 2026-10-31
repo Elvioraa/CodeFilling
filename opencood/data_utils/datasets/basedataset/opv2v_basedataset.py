@@ -25,8 +25,7 @@ class OPV2VBaseDataset(Dataset):
 
         self.pre_processor = build_preprocessor(params["preprocess"], train)
         self.post_processor = build_postprocessor(params["postprocess"], train)
-        self.data_augmentor = DataAugmentor(params['data_augment'],
-                                            train)
+        self.data_augmentor = DataAugmentor(params.get('data_augment', []), train)
 
         if 'time_delay' in params:          # number of time delay
             self.tau = params['time_delay']
@@ -119,7 +118,7 @@ class OPV2VBaseDataset(Dataset):
             make the first cav to be ego modality
             """
             if getattr(self, "heterogeneous", False):
-                scenario_name = scenario_folder.split("/")[-1]
+                scenario_name = os.path.basename(os.path.normpath(scenario_folder))
                 cav_list = self.adaptor.reorder_cav_list(cav_list, scenario_name)
 
 
@@ -165,7 +164,7 @@ class OPV2VBaseDataset(Dataset):
                     #print("___________________________________________________________________")
                     #print(getattr(self, "heterogeneous", False))
                     if getattr(self, "heterogeneous", False):
-                        scenario_name = scenario_folder.split("/")[-1]
+                        scenario_name = os.path.basename(os.path.normpath(scenario_folder))
 
                         cav_modality = self.adaptor.reassign_cav_modality(self.modality_assignment[scenario_name][cav_id] , j)
 
@@ -245,6 +244,8 @@ class OPV2VBaseDataset(Dataset):
                 input_timestamp_key = delayed_timestamp_key
             data[cav_id] = OrderedDict()
             data[cav_id]['ego'] = cav_content['ego']
+            if getattr(self, 'heterogeneous', False):
+                data[cav_id]['modality_name'] = cav_content[input_timestamp_key]['modality_name']
 
             # load param file: json is faster than yaml
             json_file = cav_content[curr_timestamp_key]['yaml'].replace("yaml", "json")
@@ -275,8 +276,10 @@ class OPV2VBaseDataset(Dataset):
                     data[cav_id]['camera_data'] = []
                     data[cav_id]['depth_data'] = []
                     for i in range(4):
-                        data[cav_id]['camera_data'].append(Image.fromarray(f[f'camera{i}'][()]))
-                        data[cav_id]['depth_data'].append(Image.fromarray(f[f'depth{i}'][()]))
+                        if self.load_camera_file:
+                            data[cav_id]['camera_data'].append(Image.fromarray(f[f'camera{i}'][()]))
+                        if self.load_depth_file:
+                            data[cav_id]['depth_data'].append(Image.fromarray(f[f'depth{i}'][()]))
             else:
                 if self.load_camera_file:
                     data[cav_id]['camera_data'] = \
@@ -334,7 +337,7 @@ class OPV2VBaseDataset(Dataset):
         timestamps = []
 
         for file in yaml_files:
-            res = file.split('/')[-1]
+            res = os.path.basename(os.path.normpath(file))
 
             timestamp = res.replace('.yaml', '')
             timestamps.append(timestamp)

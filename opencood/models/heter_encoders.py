@@ -90,21 +90,25 @@ class LiftSplatShoot(nn.Module):
                                 self.grid_conf['zbound'],
                                 )  # 划分网格
 
-        self.dx = dx.clone().detach().requires_grad_(False).to(torch.device("cuda"))  # [0.4,0.4,20]
-        self.bx = bx.clone().detach().requires_grad_(False).to(torch.device("cuda"))  # [-49.8,-49.8,0]
-        self.nx = nx.clone().detach().requires_grad_(False).to(torch.device("cuda"))  # [250,250,1]
+        self.register_buffer('dx', dx.clone().detach(), persistent=False)
+        self.register_buffer('bx', bx.clone().detach(), persistent=False)
+        self.register_buffer('nx', nx.clone().detach(), persistent=False)
         self.depth_supervision = args['depth_supervision']
         self.downsample = args['img_downsample']  # 下采样倍数
         self.camC = args['img_features']  # 图像特征维度
-        self.frustum = self.create_frustum().clone().detach().requires_grad_(False).to(torch.device("cuda"))  # frustum: DxfHxfWx3(41x8x16x3)
+        self.register_buffer('frustum', self.create_frustum().clone().detach(), persistent=False)
         self.use_quickcumsum = True
         self.D, _, _, _ = self.frustum.shape  # D: 41
         self.camera_encoder_type = args['camera_encoder']
+        efficient_factory, resnet_factory = CamEncode, CamEncode_Resnet101
+        if args.get('camera_contract') == 'doma':
+            from opencood.models.sub_modules.codefilling_camera import CamEncode as efficient_factory
+            from opencood.models.sub_modules.codefilling_camera import CamEncode_Resnet101 as resnet_factory
         if self.camera_encoder_type == 'EfficientNet':
-            self.camencode = CamEncode(self.D, self.camC, self.downsample, \
+            self.camencode = efficient_factory(self.D, self.camC, self.downsample, \
                 self.grid_conf['ddiscr'], self.grid_conf['mode'], args['use_depth_gt'], args['depth_supervision'])
         elif self.camera_encoder_type == 'Resnet101':
-            self.camencode = CamEncode_Resnet101(self.D, self.camC, self.downsample, \
+            self.camencode = resnet_factory(self.D, self.camC, self.downsample, \
                 self.grid_conf['ddiscr'], self.grid_conf['mode'], args['use_depth_gt'], args['depth_supervision'])
     
     def create_frustum(self):
@@ -298,4 +302,4 @@ class LiftSplatShootVoxel(LiftSplatShoot):
         # collapse Z
         #final = torch.max(final.unbind(dim=2), 1)[0]  # 消除掉z维
         final = torch.max(final, 2)[0]  # 消除掉z维
-        return final  # final: 4 x 64 x 240 x 240  # B, C, H, W 
+        return final  # final: 4 x 64 x 240 x 240  # B, C, H, W

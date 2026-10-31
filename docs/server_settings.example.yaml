@@ -1,0 +1,19 @@
+# Copy to a new server-local file and fill from the actual DOMA run evidence.
+# This file intentionally cannot authorize an evaluation.
+status: SERVER_VALIDATION_REQUIRED
+dataset: opv2v  # use a separate receipt for v2xset
+evidence: null  # actual saved command/config/log, not this template
+eval_range: null  # six metric bounds [xmin,ymin,zmin,xmax,ymax,zmax]
+comm_range: null
+test_dir: null
+# This is a mandatory pre-run acceptance record, not the local entry's defaults.
+# Compare against the actual formal DOMA server command/config and sample ledger.
+doma_formal_evaluation:
+  status: SERVER_VALIDATION_REQUIRED
+  command: null
+  evidence: null
+  eval_range: null
+  comm_range: null
+  test_dir: null
+  excluded_scenes: null  # V2XSet must verify exactly [2021_09_09_13_20_58]
+  scene_policy_evidence: null  # formal server sample/scene manifest or equivalent evidence

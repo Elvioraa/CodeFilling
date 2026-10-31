@@ -1,0 +1,7 @@
+# Preserve byte-level protocol evidence and extracted reference implementations.
+# Their recorded SHA256 values must survive Git checkout on Windows and Linux.
+docs/codefilling_sources/** -text whitespace=cr-at-eol
+opencood/modality_assign/*.json -text whitespace=cr-at-eol
+opencood/models/sub_modules/codefilling_camera.py -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof
+opencood/data_utils/datasets/codefilling_infer_dataset.py -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof
+opencood/models/fuse_modules/codefilling_max.py -text whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof

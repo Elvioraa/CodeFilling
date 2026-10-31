@@ -1,0 +1,58 @@
+{
+  "dataset": "v2xset",
+  "status": "SERVER_VALIDATION_REQUIRED",
+  "basis": "OPV2V saved Full V2_R2 config; V2XSet local V2 config",
+  "sources": [
+    {
+      "path": "docs/codefilling_sources/v2xset/m1.yaml",
+      "sha256": "b806bf7a19346d3c937efac8440980351dccd65ea4ba3d0e3de8dd42195d93fb",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\hypes_yaml\\v2xset\\MoreModality\\DOMA\\V2\\stage1\\m1.yaml"
+    },
+    {
+      "path": "docs/codefilling_sources/v2xset/m2.yaml",
+      "sha256": "4dc0b23c217fe6c5592fdae2798297b08d19634a087e0d008645378c2a82576f",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\hypes_yaml\\v2xset\\MoreModality\\DOMA\\V2\\stage2\\m2.yaml"
+    },
+    {
+      "path": "docs/codefilling_sources/v2xset/m3.yaml",
+      "sha256": "6a3bb776a9d0a41430b6c0a4ed29f02b3dae134159386f89ada4dd59464d6b0a",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\hypes_yaml\\v2xset\\MoreModality\\DOMA\\V2\\stage2\\m3.yaml"
+    },
+    {
+      "path": "docs/codefilling_sources/v2xset/m4.yaml",
+      "sha256": "753c4161ee58a86f32c0857a2afb20ba688f88c648c6ca7be19ac0ebee12cb41",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\hypes_yaml\\v2xset\\MoreModality\\DOMA\\V2\\stage2\\m4.yaml"
+    },
+    {
+      "path": "docs/codefilling_sources/v2xset/final.yaml",
+      "sha256": "9df059a1226691d5e0f0c07123350fc4a9938c12e01435df283706f863e485c7",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\hypes_yaml\\v2xset\\MoreModality\\DOMA\\V2\\final_infer\\m1m2m3m4.yaml"
+    },
+    {
+      "path": "opencood/modality_assign/v2xset_4modality.json",
+      "sha256": "e0419118774117cfc78266a1a34bbd409fe3d28839fbccb8d6e5e657b445b2f6",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\modality_assign\\v2xset_4modality.json"
+    },
+    {
+      "path": "opencood/modality_assign/v2xset_4modality_in_order.json",
+      "sha256": "52fea31dc9f18c67df7edf59ba2b90e1580856b2c23b8f325902ddc740a06cb6",
+      "origin": "F:\\zzuStudy\\exp_gpt\\DOMA\\opencood\\modality_assign\\v2xset_4modality_in_order.json"
+    }
+  ],
+  "unresolved": [
+    "actual server split/data identity",
+    "eval_range",
+    "comm_range",
+    "GPU sensor forward/AP",
+    "CodeFilling training budget and codebook/solver sweep"
+  ],
+  "adaptation_choices": {
+    "codebook": {
+      "seg_num": 2,
+      "dict_size": 64,
+      "r": 3
+    },
+    "fusion": "native max",
+    "budget": "local experiment template, not a DOMA/CodeFilling published result"
+  }
+}

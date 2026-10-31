@@ -1,0 +1,68 @@
+{
+  "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 15:03:56) [MSC v.1929 64 bit (AMD64)]",
+  "dependencies": {
+    "torch": true,
+    "yaml": true,
+    "numpy": true,
+    "pytest": true,
+    "icecream": false,
+    "spconv": false,
+    "timm": false,
+    "mmcv": false,
+    "torch_scatter": false,
+    "tensorboardX": false
+  },
+  "opv2v": {
+    "status": "PASS_STATIC",
+    "stages": [
+      "opencood/hypes_yaml/opv2v/doma_codefilling/codebook.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/detector.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/finetune.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/infer.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m1.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m2.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m3.yaml",
+      "opencood/hypes_yaml/opv2v/doma_codefilling/pretrain_m4.yaml"
+    ],
+    "ordered_scenes": 16,
+    "server_status": "SERVER_VALIDATION_REQUIRED",
+    "unresolved": [
+      "actual server split/data identity",
+      "eval_range",
+      "comm_range",
+      "GPU sensor forward/AP",
+      "CodeFilling training budget and codebook/solver sweep"
+    ],
+    "pre_run_blockers": [
+      "actual DOMA formal command/eval_range/comm_range/test_dir agreement"
+    ],
+    "training_budget": "batch=1/epoch=30 are editable provisional values; formal budget requires review"
+  },
+  "v2xset": {
+    "status": "PASS_STATIC",
+    "stages": [
+      "opencood/hypes_yaml/v2xset/doma_codefilling/codebook.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/detector.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/finetune.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/infer.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m1.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m2.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m3.yaml",
+      "opencood/hypes_yaml/v2xset/doma_codefilling/pretrain_m4.yaml"
+    ],
+    "ordered_scenes": 19,
+    "server_status": "SERVER_VALIDATION_REQUIRED",
+    "unresolved": [
+      "actual server split/data identity",
+      "eval_range",
+      "comm_range",
+      "GPU sensor forward/AP",
+      "CodeFilling training budget and codebook/solver sweep"
+    ],
+    "pre_run_blockers": [
+      "actual DOMA formal command/eval_range/comm_range/test_dir agreement",
+      "formal V2XSet evaluation excludes 2021_09_09_13_20_58: local source only; server evidence missing"
+    ],
+    "training_budget": "batch=1/epoch=30 are editable provisional values; formal budget requires review"
+  }
+}
