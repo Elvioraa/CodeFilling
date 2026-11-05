@@ -35,6 +35,7 @@ def main():
     cfg = load_config(opt.config)
     if cfg['codefilling_protocol']['stage'] != 'infer':
         raise ValueError('requires infer.yaml')
+    cfg['validate_dir'] = cfg['test_dir']
     checkpoint = read_checkpoint(opt.checkpoint, cfg['fusion']['dataset'], 'finetune')
     from opencood.hypes_yaml.yaml_utils import load_general_params
     from opencood.models.codefilling_doma import CodefillingDoma
