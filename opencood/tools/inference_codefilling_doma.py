@@ -4,9 +4,10 @@ import copy
 import csv
 import hashlib
 import json
+from pathlib import Path
 import torch
 import yaml
-from opencood.utils.codefilling_protocol import (load_config, validate_config, apply_server_settings, digest,
+from opencood.utils.codefilling_protocol import (load_config, digest,
                                                 experiment_output, validate_evaluation_frame, evaluation_sample_key)
 from opencood.utils.codefilling_state import seed_all, read_checkpoint
 from opencood.tools.train_codefilling_doma import to_device
@@ -28,14 +29,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', required=True)
     parser.add_argument('--checkpoint', required=True)
-    parser.add_argument('--server-settings', required=True, help='explicit VERIFIED receipt, see docs/server_settings.example.yaml')
     parser.add_argument('--output', help='optional explicit canonical stage path under opencood/logs/CodeFilling_*_SEED303/')
     parser.add_argument('--device', default='cuda')
     opt = parser.parse_args()
-    cfg = validate_config(load_config(opt.config))
+    cfg = load_config(opt.config)
     if cfg['codefilling_protocol']['stage'] != 'infer':
         raise ValueError('requires infer.yaml')
-    cfg = apply_server_settings(cfg, opt.server_settings)
     checkpoint = read_checkpoint(opt.checkpoint, cfg['fusion']['dataset'], 'finetune')
     from opencood.hypes_yaml.yaml_utils import load_general_params
     from opencood.models.codefilling_doma import CodefillingDoma
@@ -47,7 +46,7 @@ def main():
     with (output/'config.yaml').open('w', encoding='utf-8') as stream:
         yaml.safe_dump(cfg, stream, sort_keys=False)
     with (output/'run.json').open('w', encoding='utf-8') as stream:
-        json.dump(dict(checkpoint_sha256=digest(opt.checkpoint), server_receipt=cfg['codefilling_protocol']['server_receipt'],
+        json.dump(dict(config_path=str(Path(opt.config).resolve()), checkpoint_sha256=digest(opt.checkpoint),
                        sampling='native hard Gumbel; seed303 after setup per CAV group; no per-frame reseed'), stream, indent=2)
     seed_all(cfg['seed'])
     model = CodefillingDoma(cfg['model']['args']).to(opt.device).eval()
