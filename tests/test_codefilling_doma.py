@@ -13,7 +13,7 @@ import torch
 from torch import nn
 
 from opencood.utils.codefilling_protocol import ROOT, MEMBERS, load_config, validate_config, lidar_path, ordered_cavs, apply_server_settings, fingerprint
-from opencood.utils.codefilling_protocol import experiment_output, validate_evaluation_frame, evaluation_sample_key
+from opencood.utils.codefilling_protocol import experiment_output, validate_evaluation_frame, evaluation_sample_key, validate_input_members
 from opencood.models.sub_modules.codefilling_transport import (CodeFillingTransport, make_quantizer, communication_ledger,
     center_grid, pack_indices, unpack_indices, decode_sampled_codes)
 from opencood.models.comm_modules.where2comm import Communication
@@ -258,7 +258,8 @@ def test_parent_ownership_and_fail_closed(tmp_path):
         initialize_parents(model,cfg,parents)
 
 
-def test_original_gt_cutoff_on_cpu_fixture():
+@pytest.mark.parametrize('out_of_range',[(),('m2','m3'),('m2',)])
+def test_original_gt_cutoff_on_cpu_fixture(out_of_range):
     # Execute the exact copied DOMA __getitem__ with a tiny sensor/postprocessor
     # fixture: verifies control flow and full GT, not sensor decoding or AP.
     source = (ROOT/'opencood/data_utils/datasets/codefilling_infer_dataset.py').read_text(encoding='utf-8')
@@ -281,7 +282,9 @@ def test_original_gt_cutoff_on_cpu_fixture():
             self.post_processor = SimpleNamespace(collate_batch=lambda data:{},generate_label=lambda **kw:{'gt':int(kw['mask'].sum())})
             self.processed = []
         def retrieve_base_data(self,idx):
-            return OrderedDict((str(i),dict(ego=i==0,modality_name=m,params=dict(lidar_pose=[i,0,0,0,0,0],lidar_pose_clean=[i,0,0,0,0,0]))) for i,m in enumerate(MEMBERS))
+            return OrderedDict((str(101+i),dict(ego=i==0,modality_name=m,params=dict(
+                lidar_pose=[100 if m in out_of_range else i,0,0,0,0,0],
+                lidar_pose_clean=[100 if m in out_of_range else i,0,0,0,0,0]))) for i,m in enumerate(MEMBERS))
         def generate_object_center_lidar(self,cavs,pose):
             i = int(cavs[0]['params']['lidar_pose'][0])
             return np.array([[i,0,0,1,1,1,0]]),np.ones(1),[str(i)]
@@ -292,12 +295,17 @@ def test_original_gt_cutoff_on_cpu_fixture():
             return {('processed_features_' if m in ('m1','m3') else 'image_inputs_')+m:{},
                     'single_label_dict':{},'single_object_bbx_center':np.zeros((1,7)), 'single_object_bbx_mask':np.ones(1)}
     gt = []
+    available = [(str(101+i),m) for i,m in enumerate(MEMBERS) if m not in out_of_range]
     for n in (1,2,3,4):
         dataset = Fixture(n)
         result = dataset[0]['ego']
-        assert dataset.processed == list(MEMBERS[:n])
-        assert result['cav_num'] == n and result['label_dict']['gt'] == 4
-        assert result['cav_id_list'] == ['0','1','2','3']
+        assert dataset.processed == [m for _,m in available[:n]]
+        assert result['agent_modality_list'] == dataset.processed
+        assert result['cav_num'] == min(n,len(available))
+        assert result['label_dict']['gt'] == len(available)
+        assert result['cav_id_list'] == [cav for cav,_ in available]
+        validate_input_members(result['cav_id_list'],result['cav_id_list'][:result['cav_num']],
+                               result['agent_modality_list'],[m for _,m in available],n)
         gt.append(result['object_bbx_center'])
     assert all(np.array_equal(gt[0],x) for x in gt[1:])
 
@@ -580,6 +588,7 @@ def test_cross_cav_actual_frame_gt_prefix_and_message_identity():
         realized = min(count,3)
         return dict(requested_cavs=count,realized_cavs=realized,all_cav_ids=['1','2','-1'],
             input_cav_ids=['1','2','-1'][:realized],modalities=list(MEMBERS[:realized]),gt_hash='fixture_gt',sample_idx=0,
+            cav_modalities=list(MEMBERS[:3]),
             sample_key=dict(scene='fixture_scene',timestamp='0001',sample_idx=0),
             communication=dict(peers=realized-1,messages=[dict(batch=0,sender=a) for a in range(1,realized)]))
     baseline = validate_evaluation_frame(row(1))
@@ -604,3 +613,493 @@ def test_cross_cav_actual_frame_gt_prefix_and_message_identity():
     fixture = SimpleNamespace(len_record=[2,4],tau=0,scenario_folders=['test/scene_a','test/scene_b'],
                               scenario_database={0:['0001','0002'],1:['0010','0011']},return_timestamp_key=lambda db,i:db[i])
     assert evaluation_sample_key(fixture,2) == dict(scene='scene_b',timestamp='0010',sample_idx=2)
+
+
+@pytest.mark.parametrize('ids,modalities', [
+    (['641','-1'],['m1','m4']),
+    (['641','659','-1'],['m1','m3','m4']),
+])
+def test_filtered_members_preserve_real_ids_modalities_and_messages(ids,modalities):
+    original_ids,original_modalities = ids[:],modalities[:]
+    reference = None
+    for requested in (1,2,3,4):
+        realized = min(requested,len(ids))
+        actual_mods = modalities[:realized]
+        validate_input_members(ids,ids[:realized],actual_mods,modalities,requested)
+        ledger = communication_ledger(torch.ones(realized,1,4,4),[realized],dict(seg_num=2,dict_size=64,r=3))
+        row = dict(requested_cavs=requested,realized_cavs=realized,all_cav_ids=ids[:],
+            input_cav_ids=ids[:realized],modalities=actual_mods,cav_modalities=modalities[:],
+            gt_hash='same_range_filtered_gt',sample_idx=7,
+            sample_key=dict(scene='real_id_fixture',timestamp='000123',sample_idx=7),communication=ledger)
+        identity_hash = validate_evaluation_frame(row)
+        reference = identity_hash if reference is None else reference
+        assert identity_hash == reference
+        assert row['input_cav_ids'] == original_ids[:realized]
+        assert row['modalities'] == original_modalities[:realized]
+        for index,message in enumerate(row['communication']['messages'],1):
+            assert message['cav_id'] == original_ids[index]
+            assert message['modality'] == original_modalities[index]
+        assert row['communication']['selected_cells'] == (realized-1)*16
+        assert row['communication']['total_bytes'] >= 0
+    assert ids == original_ids and modalities == original_modalities
+    # Filling a missing slot with m2 would silently relabel a valid m4/m3 CAV.
+    with pytest.raises(ValueError):
+        validate_input_members(ids,ids[:2],['m1','m2'],modalities,2)
+    with pytest.raises(ValueError):
+        validate_input_members(ids,ids[:],modalities,['m1','m2'] if len(ids)==2 else ['m1','m2','m4'],4)
+    # A filtered subset still requires the actual m1 ego in the first position.
+    with pytest.raises(ValueError):
+        validate_input_members(ids,ids[:],['m4']+modalities[1:],['m4']+modalities[1:],4)
+
+
+def _review_native_evaluation(path=None):
+    """Run only native AP functions; no sensor/CUDA module imports or inference."""
+    import os
+    path = path or ROOT/'opencood/utils/eval_utils.py'
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    functions = [n for n in tree.body if isinstance(n,ast.FunctionDef) and
+                 n.name in ('voc_ap','calculate_ap','eval_final_results')]
+    saved = {}
+    namespace = dict(np=np,os=os,yaml_utils=SimpleNamespace(
+        save_yaml=lambda values,path:saved.update(values=copy.deepcopy(values),path=str(path))))
+    exec(compile(ast.fix_missing_locations(ast.Module(body=functions,type_ignores=[])),str(path),'exec'),namespace)
+    return SimpleNamespace(**namespace),saved
+
+
+def _review_ap_stats():
+    return {threshold:dict(tp=[1,0,1],fp=[0,1,0],score=[.7,.9,.2],gt=2) for threshold in (.3,.5,.7)}
+
+
+def test_final_eval_yaml_matches_native_doma_fields_and_full_curves():
+    from opencood.tools.inference_codefilling_doma import EVAL_FIELDS,evaluation_values,complete_evaluation
+    native,saved = _review_native_evaluation()
+    stats = _review_ap_stats()
+    actual = evaluation_values(stats,native.calculate_ap)
+    native.eval_final_results(stats,'fixture','intermediate_use_cav1')
+    assert actual == saved['values']
+    assert tuple(actual) == EVAL_FIELDS
+    assert saved['path'].endswith('eval_intermediate_use_cav1.yaml')
+    doma = ROOT.parents[1]/'DOMA/opencood/utils/eval_utils.py'
+    if doma.is_file():
+        reference,reference_saved = _review_native_evaluation(doma)
+        reference.eval_final_results(stats,'fixture','intermediate_use_cav1')
+        assert actual == reference_saved['values']
+    assert complete_evaluation(actual)
+    for broken in ({},dict(actual,ap30=float('nan')),dict(actual,mrec_50=[]),
+                   dict(actual,mpre_70=[0.]),dict(actual,ap_50=1.1)):
+        assert not complete_evaluation(broken)
+
+
+def test_final_infer_history_is_backed_up_without_deleting_any_file(tmp_path):
+    from opencood.tools.inference_codefilling_doma import prepare_output
+    output = tmp_path/'infer'
+    (output/'partial').mkdir(parents=True)
+    (output/'infer.log').write_bytes(b'historical log\n')
+    (output/'partial'/'old.txt').write_bytes(b'incomplete result retained\n')
+    before = {str(p.relative_to(output)):p.read_bytes() for p in output.rglob('*') if p.is_file()}
+    backup = prepare_output(output)
+    assert backup.parent == output.parent and backup != output
+    assert output.is_dir() and not list(output.iterdir())
+    assert {str(p.relative_to(backup)):p.read_bytes() for p in backup.rglob('*') if p.is_file()} == before
+    assert prepare_output(output) is None
+    (output/'new_partial.txt').write_text('another interrupted result')
+    second = prepare_output(output)
+    assert second != backup and (second/'new_partial.txt').read_text() == 'another interrupted result'
+    assert (backup/'infer.log').read_bytes() == b'historical log\n'
+
+
+def test_completed_log_and_eval_yaml_reuse_requires_matching_context_and_sha(tmp_path):
+    import yaml
+    from opencood.tools.inference_codefilling_doma import evaluation_values,reusable_cav1,signature
+    from opencood.utils.codefilling_protocol import digest
+    native,_ = _review_native_evaluation()
+    values = evaluation_values(_review_ap_stats(),native.calculate_ap)
+    output = tmp_path/'infer'
+    output.mkdir()
+    path = output/'eval_intermediate_use_cav1.yaml'
+    path.write_text(yaml.safe_dump(values,sort_keys=False))
+    context = dict(checkpoint_sha256='same-checkpoint',config_sha256='same-config',assignment_sha256='same-assignment')
+    checked = signature(['frame-0-with-gt','frame-1-with-gt'])
+    completed = dict(requested_cavs=1,**checked,eval_file=path.name,eval_sha256=digest(path))
+    (output/'infer.log').write_text('CODEFILLING_RUN '+json.dumps(context)+'\nCAV_COMPLETE '+json.dumps(completed)+'\n')
+    cache = reusable_cav1(output,config('v2xset'),context,{},native.calculate_ap)
+    assert cache['values'] == values and cache['signature'] == checked
+    with (output/'infer.log').open('a') as stream:
+        stream.write('CAV_COMPLETE {"requested_cavs":2,')
+    assert reusable_cav1(output,config('v2xset'),context,{},native.calculate_ap)['values'] == values
+    assert reusable_cav1(output,config('v2xset'),dict(context,checkpoint_sha256='other-checkpoint'),{},native.calculate_ap) is None
+    path.write_text(yaml.safe_dump(dict(values,ap30=.123),sort_keys=False))
+    assert reusable_cav1(output,config('v2xset'),context,{},native.calculate_ap) is None
+    # A partial completion record must not be accepted as a finished CAV1 AP.
+    (output/'infer.log').write_text('CODEFILLING_RUN '+json.dumps(context)+'\nCAV_COMPLETE {')
+    assert reusable_cav1(output,config('v2xset'),context,{},native.calculate_ap) is None
+
+
+@pytest.mark.parametrize('saved_format',['raw','yaml'])
+def test_legacy_completed_cav1_raw_ap_and_frames_can_migrate_without_forward(tmp_path,saved_format):
+    import yaml
+    from opencood.tools.inference_codefilling_doma import reusable_cav1,evaluation_values,signature
+    cfg = config('v2xset')
+    assignment = {'fixture_scene':{'641':'m1','-1':'m4'}}
+    context = dict(checkpoint_sha256='legacy-checkpoint',config_sha256=fingerprint(cfg))
+    output = tmp_path/'infer'
+    output.mkdir()
+    (output/'run.json').write_text(json.dumps(dict(checkpoint_sha256=context['checkpoint_sha256'])))
+    (output/'config.yaml').write_text(yaml.safe_dump(cfg))
+    rows = [dict(index=i,sample_idx=i,sample_key=dict(scene='fixture_scene',timestamp=f'{i:04}',sample_idx=i),
+                 requested_cavs=1,realized_cavs=1,all_cav_ids=['641','-1'],input_cav_ids=['641'],modalities=['m1'],
+                 gt_hash='frame-'+str(i)+'-GT',communication=dict(peers=0,messages=[],total_bytes=0)) for i in range(2)]
+    frames = output/'cav1_frames.jsonl'
+    frames.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    native,_ = _review_native_evaluation()
+    raw = output/('cav1_raw_ap.json' if saved_format == 'raw' else 'eval_intermediate_use_cav1.yaml')
+    raw.write_text(json.dumps(_review_ap_stats() if saved_format == 'raw' else
+                              evaluation_values(_review_ap_stats(),native.calculate_ap)))
+    cache = reusable_cav1(output,cfg,context,assignment,native.calculate_ap)
+    identities = []
+    for row in copy.deepcopy(rows):
+        row['cav_modalities'] = ['m1','m4']
+        identities.append(validate_evaluation_frame(row))
+    assert cache['signature'] == signature(identities)
+    assert cache['values'] == evaluation_values(_review_ap_stats(),native.calculate_ap)
+    assert cache['source'] == raw.name
+    frames.write_text(json.dumps(rows[0])+'\n{')
+    assert reusable_cav1(output,cfg,context,assignment,native.calculate_ap) is None
+    frames.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    invalid = _review_ap_stats() if saved_format == 'raw' else {}
+    if saved_format == 'raw':
+        invalid[.5]['score'] = []
+    raw.write_text(json.dumps(invalid))
+    assert reusable_cav1(output,cfg,context,assignment,native.calculate_ap) is None
+
+
+class _ReviewInferenceDataset(torch.utils.data.Dataset):
+    """A two-frame GT fixture, never an actual perception Dataset or model."""
+    def __init__(self,count):
+        self.count = count
+        self.len_record,self.tau = [2],0
+        self.scenario_folders = ['fixture/fixture_scene']
+        self.scenario_database = {0:['0000','0001']}
+        self.post_processor = SimpleNamespace(generate_gt_bbx=self.gt)
+
+    @staticmethod
+    def return_timestamp_key(database,index):
+        return database[index]
+
+    @staticmethod
+    def gt(batch):
+        return torch.full((1,8,3),float(batch['ego']['sample_idx']))
+
+    def __len__(self):
+        return 2
+
+    def __getitem__(self,index):
+        return {'ego':dict(sample_idx=index,cav_id_list=['641','-1'],agent_modality_list=['m1','m4'][:self.count])}
+
+    @staticmethod
+    def collate_batch_test(batch):
+        return batch[0]
+
+    def post_process(self,batch,prediction):
+        return None,None,self.gt(batch)
+
+
+def _review_fixture_eval_utils():
+    native,_ = _review_native_evaluation()
+    def add_result(boxes,scores,gt,stats,threshold):
+        stats[threshold]['gt'] += len(gt)
+        stats[threshold]['tp'].append(1)
+        stats[threshold]['fp'].append(0)
+        stats[threshold]['score'].append(.8)
+    return SimpleNamespace(calculate_ap=native.calculate_ap,caluclate_tp_fp=add_result)
+
+
+def test_reusing_cav1_builds_gt_identity_without_any_model_forward(capsys):
+    from opencood.tools.inference_codefilling_doma import evaluate_group,evaluation_values,signature,tensor_hash
+    cfg = config('v2xset')
+    assignment = {'fixture_scene':{'641':'m1','-1':'m4'}}
+    dataset = _ReviewInferenceDataset(1)
+    identities = []
+    for index in range(2):
+        batch = dataset[index]
+        row = dict(sample_idx=index,sample_key=evaluation_sample_key(dataset,index),all_cav_ids=['641','-1'],
+                   input_cav_ids=['641'],modalities=['m1'],cav_modalities=['m1','m4'],requested_cavs=1,realized_cavs=1,
+                   gt_hash=tensor_hash(dataset.gt(batch)),communication=dict(peers=0,messages=[],total_bytes=0))
+        identities.append(validate_evaluation_frame(row))
+    native = _review_fixture_eval_utils()
+    values = evaluation_values(_review_ap_stats(),native.calculate_ap)
+    cache = dict(values=values,signature=signature(identities))
+    def no_model_forward(batch):
+        raise AssertionError('a reusable CAV1 must not call its model')
+    result,summary = evaluate_group(cfg,1,no_model_forward,'cpu',assignment,
+        lambda *args,**kwargs:dataset,native,reuse=cache)
+    assert result == values and summary['reused'] is True
+    assert summary['mean_bytes'] == 0 and summary['frames'] == 2
+    assert 'GT-check/reuse 2/2' in capsys.readouterr().out
+
+
+def test_fixture_main_writes_only_log_and_four_eval_yamls_and_reuses_cav1(tmp_path,monkeypatch):
+    import sys
+    import yaml
+    from opencood.tools import inference_codefilling_doma as entry
+    cfg = config('v2xset')
+    assignment = tmp_path/'assignment.json'
+    assignment.write_text(json.dumps({'fixture_scene':{'641':'m1','-1':'m4'}}))
+    cfg['heter']['assignment_path'] = str(assignment)
+    config_path = tmp_path/'config.yaml'
+    config_path.write_text(yaml.safe_dump(cfg))
+    checkpoint = tmp_path/'fixture_checkpoint.bin'
+    checkpoint.write_bytes(b'CPU contract fixture; no trained weights')
+    output = tmp_path/'infer'
+    calls = []
+    class FixtureModel:
+        def __init__(self,args): pass
+        def to(self,device): return self
+        def eval(self): return self
+        def load_state_dict(self,state,strict): assert state == {} and strict
+        def __call__(self,batch):
+            mods = batch['agent_modality_list']
+            calls.append(mods[:])
+            peers = len(mods)-1
+            return {'communication':dict(peers=peers,messages=[dict(batch=0,sender=i) for i in range(1,peers+1)],total_bytes=peers*100)}
+    monkeypatch.setitem(sys.modules,'opencood.models.codefilling_doma',SimpleNamespace(CodefillingDoma=FixtureModel))
+    monkeypatch.setitem(sys.modules,'opencood.data_utils.codefilling_dataset',SimpleNamespace(
+        build_codefilling_dataset=lambda current,**kw:_ReviewInferenceDataset(current['use_cav'])))
+    import opencood.utils
+    fake_eval = _review_fixture_eval_utils()
+    monkeypatch.setitem(sys.modules,'opencood.utils.eval_utils',fake_eval)
+    monkeypatch.setattr(opencood.utils,'eval_utils',fake_eval,raising=False)
+    monkeypatch.setattr(entry,'read_checkpoint',lambda *args,**kw:dict(model={}))
+    monkeypatch.setattr(entry,'experiment_output',lambda *args,**kw:output)
+    monkeypatch.setattr(sys,'argv',['inference_fixture','--config',str(config_path),'--checkpoint',str(checkpoint),'--device','cpu'])
+    entry.main()
+    expected = {'infer.log'}|{f'eval_intermediate_use_cav{n}.yaml' for n in (1,2,3,4)}
+    assert {p.name for p in output.iterdir()} == expected
+    assert len(calls) == 8
+    before = {p.name:p.read_bytes() for p in output.iterdir()}
+    for n in (1,2,3,4):
+        values = yaml.safe_load(before[f'eval_intermediate_use_cav{n}.yaml'])
+        assert tuple(values) == entry.EVAL_FIELDS and values['ap30'] == 1.
+    entry.main()
+    assert len(calls) == 14  # second run calls CAV2-4 only; CAV1 is GT-only
+    assert {p.name for p in output.iterdir()} == expected
+    assert (output/'eval_intermediate_use_cav1.yaml').read_bytes() == before['eval_intermediate_use_cav1.yaml']
+    backups = list(tmp_path.glob('infer_backup_*'))
+    assert len(backups) == 1
+    assert {p.name:p.read_bytes() for p in backups[0].iterdir()} == before
+    assert 'CAV1 GT-check/reuse' in (output/'infer.log').read_text()
+
+
+def test_dataset_wrapper_accepts_actual_m1_m4_item_without_relabeling():
+    source = (ROOT/'opencood/data_utils/codefilling_dataset.py').read_text(encoding='utf-8')
+    method = next(node for node in ast.walk(ast.parse(source)) if isinstance(node,ast.FunctionDef) and node.name == '__getitem__')
+    item = {'ego':dict(agent_modality_list=['m1','m4'],cav_id_list=['641','-1'])}
+    class Parent:
+        def __getitem__(self,index):
+            return item
+    wrapper = ast.ClassDef(name='ProtocolDataset',bases=[ast.Name(id='parent',ctx=ast.Load())],keywords=[],
+                           body=[method],decorator_list=[],type_params=[])
+    namespace = dict(parent=Parent,inference=True,cfg=config('v2xset'),
+                     evaluation_sample_key=evaluation_sample_key,validate_input_members=validate_input_members)
+    exec(compile(ast.fix_missing_locations(ast.Module(body=[wrapper],type_ignores=[])),'actual_protocol_wrapper','exec'),namespace)
+    dataset = namespace['ProtocolDataset']()
+    dataset.use_cav,dataset.len_record,dataset.tau = 4,[1],0
+    dataset.scenario_folders = ['test/fixture_scene']
+    dataset.scenario_database = {0:['0001']}
+    dataset.return_timestamp_key = lambda database,index:database[index]
+    dataset.modality_assignment = {'fixture_scene':{'641':'m1','-1':'m4'}}
+    assert dataset[0] is item
+    assert item['ego']['cav_id_list'] == ['641','-1']
+    assert item['ego']['agent_modality_list'] == ['m1','m4']
+    dataset.modality_assignment['fixture_scene']['-1'] = 'm2'
+    with pytest.raises(ValueError,match='mapping'):
+        dataset[0]
+
+
+def test_doma_evaluation_protocol_off_preserves_config_identity_and_fingerprint():
+    from opencood.tools import inference_codefilling_doma as entry
+    cfg = config('v2xset')
+    original = copy.deepcopy(cfg)
+    original_hash = fingerprint(cfg)
+    assert entry.apply_doma_evaluation_protocol(cfg) is cfg
+    assert entry.apply_doma_evaluation_protocol(cfg,enabled=False) is cfg
+    assert cfg == original and fingerprint(cfg) == original_hash
+    assert 'evaluation_protocol' not in cfg['codefilling_protocol']
+
+
+@pytest.mark.parametrize('dataset',['opv2v','v2xset'])
+def test_doma_evaluation_protocol_on_synchronizes_ranges_without_mutating_cameras(dataset):
+    from opencood.tools import inference_codefilling_doma as entry
+    cfg = config(dataset)
+    original = copy.deepcopy(cfg)
+    enabled = entry.apply_doma_evaluation_protocol(cfg,enabled=True)
+    expected = [-204.8,-102.4,-3,204.8,102.4,1]
+    assert enabled is not cfg and cfg == original
+    assert list(entry.DOMA_EVALUATION_BOUNDS) == expected
+    assert entry.DOMA_COMMUNICATION_RANGE == 180
+    ranges = [enabled['cav_lidar_range'],enabled['preprocess']['cav_lidar_range'],
+        enabled['postprocess']['gt_range'],enabled['postprocess']['anchor_args']['cav_lidar_range'],
+        enabled['model']['args']['lidar_range']]
+    for member in ('m1','m3'):
+        ranges.extend([enabled['heter']['modality_setting'][member]['preprocess']['cav_lidar_range'],
+                       enabled['model']['args'][member]['encoder_args']['lidar_range']])
+    assert len(ranges) == 9 and all(bounds == expected for bounds in ranges)
+    assert enabled['comm_range'] == 180
+    assert enabled['codefilling_protocol']['evaluation_protocol'] == dict(
+        name='doma',eval_bounds=expected,comm_range=180)
+    for member in ('m2','m4'):
+        assert enabled['heter']['modality_setting'][member] == original['heter']['modality_setting'][member]
+        assert enabled['model']['args'][member]['encoder_args'] == original['model']['args'][member]['encoder_args']
+        assert enabled['model']['args'][member]['camera_mask_args']['cav_lidar_range'] == expected
+        assert enabled['model']['args'][member]['camera_mask_args']['grid_conf'] == original['model']['args'][member]['camera_mask_args']['grid_conf']
+    # Every remaining field must equal the old path: no voxel-size, model,
+    # augmentation, seed, assignment or stage/output changes hidden in the switch.
+    restored = copy.deepcopy(enabled)
+    restored['cav_lidar_range'] = original['cav_lidar_range']
+    restored['preprocess']['cav_lidar_range'] = original['preprocess']['cav_lidar_range']
+    restored['postprocess']['gt_range'] = original['postprocess']['gt_range']
+    restored['postprocess']['anchor_args']['cav_lidar_range'] = original['postprocess']['anchor_args']['cav_lidar_range']
+    restored['model']['args']['lidar_range'] = original['model']['args']['lidar_range']
+    for member in ('m1','m3'):
+        restored['heter']['modality_setting'][member]['preprocess']['cav_lidar_range'] = original['heter']['modality_setting'][member]['preprocess']['cav_lidar_range']
+        restored['model']['args'][member]['encoder_args']['lidar_range'] = original['model']['args'][member]['encoder_args']['lidar_range']
+    for member in ('m2','m4'):
+        restored['model']['args'][member]['camera_mask_args']['cav_lidar_range'] = original['model']['args'][member]['camera_mask_args']['cav_lidar_range']
+    restored['comm_range'] = original['comm_range']
+    restored['codefilling_protocol'].pop('evaluation_protocol')
+    assert restored == original
+    assert fingerprint(enabled) != fingerprint(cfg)
+    # The marker distinguishes the switch even if an OFF config already has
+    # numerically identical ranges and communication distance.
+    off_same_numbers = copy.deepcopy(enabled)
+    off_same_numbers['codefilling_protocol'].pop('evaluation_protocol')
+    assert fingerprint(entry.apply_doma_evaluation_protocol(off_same_numbers)) != fingerprint(enabled)
+
+
+@pytest.mark.parametrize('dataset',['opv2v','v2xset'])
+def test_doma_evaluation_protocol_anchor_dimensions_are_regenerated(dataset):
+    from opencood.tools import inference_codefilling_doma as entry
+    from opencood.hypes_yaml.yaml_utils import load_general_params
+    cfg = config(dataset)
+    cfg['postprocess']['anchor_args'].update(W=1,H=1,D=999,vw=123,vh=456,vd=789)
+    enabled = entry.apply_doma_evaluation_protocol(cfg,enabled=True)
+    parsed = load_general_params(enabled)
+    anchors = parsed['postprocess']['anchor_args']
+    assert [anchors[key] for key in ('W','H','D')] == [1024,512,1]
+    assert [anchors[key] for key in ('vw','vh','vd')] == cfg['preprocess']['args']['voxel_size']
+    assert cfg['postprocess']['anchor_args']['W'] == 1
+    assert anchors['cav_lidar_range'] == list(entry.DOMA_EVALUATION_BOUNDS)
+
+
+@pytest.mark.parametrize('changed',['bounds','communication'])
+def test_doma_evaluation_protocol_range_and_communication_constants_are_independent(monkeypatch,changed):
+    from opencood.tools import inference_codefilling_doma as entry
+    cfg = config('v2xset')
+    if changed == 'bounds':
+        new_bounds = (-102.4,-51.2,-3,102.4,51.2,1)
+        monkeypatch.setattr(entry,'DOMA_EVALUATION_BOUNDS',new_bounds)
+        enabled = entry.apply_doma_evaluation_protocol(cfg,enabled=True)
+        assert enabled['cav_lidar_range'] == list(new_bounds)
+        assert enabled['comm_range'] == 180
+    else:
+        monkeypatch.setattr(entry,'DOMA_COMMUNICATION_RANGE',70)
+        enabled = entry.apply_doma_evaluation_protocol(cfg,enabled=True)
+        assert enabled['cav_lidar_range'] == [-204.8,-102.4,-3,204.8,102.4,1]
+        assert enabled['comm_range'] == 70
+    assert enabled['codefilling_protocol']['evaluation_protocol']['eval_bounds'] == enabled['cav_lidar_range']
+    assert enabled['codefilling_protocol']['evaluation_protocol']['comm_range'] == enabled['comm_range']
+
+
+@pytest.mark.parametrize('cache_format',['log','legacy'])
+@pytest.mark.parametrize('stored_enabled',[False,True])
+def test_cav1_reuse_accepts_same_protocol_and_rejects_cross_protocol(tmp_path,cache_format,stored_enabled):
+    import yaml
+    from opencood.tools import inference_codefilling_doma as entry
+    from opencood.hypes_yaml.yaml_utils import load_general_params
+    from opencood.utils.codefilling_protocol import digest
+    native,_ = _review_native_evaluation()
+    base = config('v2xset')
+    stored = load_general_params(entry.apply_doma_evaluation_protocol(copy.deepcopy(base),enabled=stored_enabled))
+    other = load_general_params(entry.apply_doma_evaluation_protocol(copy.deepcopy(base),enabled=not stored_enabled))
+    assert fingerprint(stored) != fingerprint(other)
+    context = dict(checkpoint_sha256='same-finetune-checkpoint',config_sha256=fingerprint(stored),assignment_sha256='same-assignment')
+    other_context = dict(context,config_sha256=fingerprint(other))
+    assignment = {'fixture_scene':{'641':'m1','-1':'m4'}}
+    row = dict(index=0,sample_idx=0,sample_key=dict(scene='fixture_scene',timestamp='0001',sample_idx=0),
+               requested_cavs=1,realized_cavs=1,all_cav_ids=['641','-1'],input_cav_ids=['641'],modalities=['m1'],
+               cav_modalities=['m1','m4'],gt_hash='same-frame-and-gt',communication=dict(peers=0,messages=[],total_bytes=0))
+    checked = entry.signature([validate_evaluation_frame(copy.deepcopy(row))])
+    values = entry.evaluation_values(_review_ap_stats(),native.calculate_ap)
+    output = tmp_path/'infer'
+    output.mkdir()
+    path = output/'eval_intermediate_use_cav1.yaml'
+    path.write_text(yaml.safe_dump(values,sort_keys=False))
+    if cache_format == 'log':
+        completed = dict(requested_cavs=1,**checked,eval_file=path.name,eval_sha256=digest(path))
+        (output/'infer.log').write_text('CODEFILLING_RUN '+json.dumps(context)+'\nCAV_COMPLETE '+json.dumps(completed)+'\n')
+    else:
+        (output/'run.json').write_text(json.dumps(dict(checkpoint_sha256=context['checkpoint_sha256'])))
+        (output/'config.yaml').write_text(yaml.safe_dump(stored))
+        (output/'cav1_frames.jsonl').write_text(json.dumps(row)+'\n')
+    reused = entry.reusable_cav1(output,stored,context,assignment,native.calculate_ap)
+    assert reused['values'] == values and reused['signature'] == checked
+    assert entry.reusable_cav1(output,other,other_context,assignment,native.calculate_ap) is None
+    # Keep the protocol name/state unchanged: actual numeric settings must also
+    # invalidate cache, rather than relying only on the ON/OFF marker.
+    for changed in ('comm_range','cav_lidar_range')+ (('evaluation_protocol',) if stored_enabled else ()):
+        altered = copy.deepcopy(stored)
+        if changed == 'comm_range':
+            altered['comm_range'] += 1
+            if stored_enabled:
+                altered['codefilling_protocol']['evaluation_protocol']['comm_range'] = altered['comm_range']
+        elif changed == 'cav_lidar_range':
+            bounds = altered['cav_lidar_range'][:]
+            bounds[0] -= 3.2
+            bounds[3] += 3.2
+            altered['cav_lidar_range'] = bounds[:]
+            altered['preprocess']['cav_lidar_range'] = bounds[:]
+            altered['postprocess']['gt_range'] = bounds[:]
+            altered['postprocess']['anchor_args']['cav_lidar_range'] = bounds[:]
+            altered['model']['args']['lidar_range'] = bounds[:]
+            for member in ('m1','m3'):
+                altered['heter']['modality_setting'][member]['preprocess']['cav_lidar_range'] = bounds[:]
+                altered['model']['args'][member]['encoder_args']['lidar_range'] = bounds[:]
+            for member in ('m2','m4'):
+                altered['model']['args'][member]['camera_mask_args']['cav_lidar_range'] = bounds[:]
+            if stored_enabled:
+                altered['codefilling_protocol']['evaluation_protocol']['eval_bounds'] = bounds[:]
+        else:
+            # Same numerical bounds/communication settings, but a legacy/manual
+            # config without the explicit protocol marker is a different context.
+            altered['codefilling_protocol'].pop('evaluation_protocol')
+        altered_context = dict(context,config_sha256=fingerprint(altered))
+        assert altered_context['config_sha256'] != context['config_sha256']
+        assert entry.reusable_cav1(output,altered,altered_context,assignment,native.calculate_ap) is None
+    # Cache inspection must not modify any saved evaluation result.
+    assert yaml.safe_load(path.read_text()) == values
+
+
+def test_doma_evaluation_protocol_cli_is_opt_in_and_applied_before_anchor_and_context():
+    import argparse
+    source = (ROOT/'opencood/tools/inference_codefilling_doma.py').read_text(encoding='utf-8')
+    tree = ast.parse(source)
+    main = next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name == 'main')
+    parse_index = next(i for i,node in enumerate(main.body) if isinstance(node,ast.Assign) and
+                       any(isinstance(t,ast.Name) and t.id == 'opt' for t in node.targets))
+    namespace = dict(argparse=argparse,__doc__='static CLI fixture')
+    exec(compile(ast.fix_missing_locations(ast.Module(body=main.body[:parse_index],type_ignores=[])),'protocol_cli_fixture','exec'),namespace)
+    args = ['--config','fixture/config.yaml','--checkpoint','fixture/checkpoint.pth']
+    off = namespace['parser'].parse_args(args)
+    on = namespace['parser'].parse_args(args+['--doma-evaluation-protocol'])
+    assert off.doma_evaluation_protocol is False and on.doma_evaluation_protocol is True
+    assert {key:value for key,value in vars(on).items() if key != 'doma_evaluation_protocol'} == {
+        key:value for key,value in vars(off).items() if key != 'doma_evaluation_protocol'}
+    helper_index = next(i for i,node in enumerate(main.body) if any(isinstance(n,ast.Call) and
+        isinstance(n.func,ast.Name) and n.func.id == 'apply_doma_evaluation_protocol' for n in ast.walk(node)))
+    stage_index = next(i for i,node in enumerate(main.body) if isinstance(node,ast.If) and
+                       "['stage']" in ast.unparse(node.test))
+    anchor_index = next(i for i,node in enumerate(main.body) if any(isinstance(n,ast.Call) and
+        isinstance(n.func,ast.Name) and n.func.id == 'load_general_params' for n in ast.walk(node)))
+    context_index = next(i for i,node in enumerate(main.body) if any(isinstance(n,ast.Call) and
+        isinstance(n.func,ast.Name) and n.func.id == 'fingerprint' for n in ast.walk(node)))
+    assert stage_index < helper_index < anchor_index < context_index

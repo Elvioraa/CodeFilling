@@ -23,15 +23,24 @@ def experiment_output(cfg, output=None):
     return expected
 
 
+def validate_input_members(ids, selected, mods, assigned_mods, requested):
+    """Validate the physical prefix AFTER range filtering, allowing modality gaps."""
+    if (requested not in (1,2,3,4) or not ids or len(ids) != len(set(ids)) or
+            len(assigned_mods) != len(ids) or any(m not in MEMBERS for m in assigned_mods)):
+        raise ValueError('invalid evaluation CAV IDs/count/modalities')
+    realized = min(requested, len(ids))
+    if selected != ids[:realized] or mods != assigned_mods[:realized] or mods[0] != 'm1':
+        raise ValueError('invalid realized physical/member prefix or CAV/modality mapping')
+    return realized
+
+
 def validate_evaluation_frame(row):
-    """Audit the physical prefix and return sample/GT identity across CAV groups."""
+    """Audit real CAV/modality correspondence and sample/GT identity across groups."""
     count = row['requested_cavs']
     ids, selected, mods = row['all_cav_ids'], row['input_cav_ids'], row['modalities']
-    if count not in (1,2,3,4) or not ids or len(ids) != len(set(ids)):
-        raise ValueError('invalid evaluation CAV IDs/count')
-    realized = min(count, len(ids))
-    if (row['realized_cavs'] != realized or selected != ids[:realized] or
-            mods != list(MEMBERS[:realized])):
+    assigned_mods = row['cav_modalities']
+    realized = validate_input_members(ids, selected, mods, assigned_mods, count)
+    if row['realized_cavs'] != realized or selected != ids[:realized]:
         raise ValueError('invalid realized physical/member prefix')
     ledger = row['communication']
     expected = list(range(1, realized))
@@ -46,7 +55,7 @@ def validate_evaluation_frame(row):
     if not key.get('scene') or not key.get('timestamp') or key.get('sample_idx') != row['sample_idx']:
         raise ValueError('missing/mismatched actual scene/timestamp identity')
     # Index alone cannot establish that two DataLoaders used the same frame.
-    return fingerprint(dict(sample_key=key, all_cav_ids=ids, gt_hash=row['gt_hash']))
+    return fingerprint(dict(sample_key=key, all_cav_ids=ids, cav_modalities=assigned_mods, gt_hash=row['gt_hash']))
 
 
 def evaluation_sample_key(dataset, index):

@@ -1,7 +1,7 @@
 """Protocol-only dataset factory; the official dataset registry remains unchanged."""
 import copy
 from pathlib import Path
-from opencood.utils.codefilling_protocol import MEMBERS, ordered_cavs, lidar_path
+from opencood.utils.codefilling_protocol import ordered_cavs, lidar_path, evaluation_sample_key, validate_input_members
 
 
 def build_codefilling_dataset(cfg, train=False, inference=False):
@@ -44,9 +44,11 @@ def build_codefilling_dataset(cfg, train=False, inference=False):
             if inference and item is not None:
                 ego = item['ego']
                 mods = ego['agent_modality_list']
-                # Out-of-range slots must never silently relabel another member.
-                if mods != list(MEMBERS[:len(mods)]):
-                    raise ValueError('non-prefix members after communication-range filtering: '+str(mods))
+                scene = evaluation_sample_key(self, index)['scene']
+                assignment = self.modality_assignment[scene]
+                ids = ego['cav_id_list']
+                assigned = [cfg['heter']['mapping_dict'][assignment[str(cav)]] for cav in ids]
+                validate_input_members(ids, ids[:len(mods)], mods, assigned, self.use_cav)
             return item
 
     # DOMA ordered evaluation uses visualize=True to force LiDAR GT for all slots.
